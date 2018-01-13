@@ -41,8 +41,14 @@ library:
   - NumHask.Algebra.Multiplicative
   - NumHask.Algebra.Singleton
   - NumHask.Laws
+  - TH
   dependencies:
   - base >=4.7 && <4.11
+  - deepseq
+  - th-desugar
+  - template-haskell
+  - adjunctions
+  - distributive
 tests:
   test:
     main: test.hs

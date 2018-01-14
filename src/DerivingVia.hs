@@ -1,3 +1,5 @@
+-- modified from https://gist.github.com/Icelandjack/1f578e7103ff327cbcfb3426c005e26c
+
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE LambdaCase #-}
@@ -6,7 +8,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 {-# OPTIONS_GHC -fno-warn-deprecations #-}
 
-module TH where
+module DerivingVia where
 
 import Protolude
 import Language.Haskell.TH
@@ -83,6 +85,12 @@ deriveVia semi instanceType via_newtype = do
       , (STAR:>(STAR:>STAR)) :> (STAR:>(STAR:>STAR))) -> do
         yyy <- newName "yyy"
         pure Var { typeArgs = [], wrappedArgs = [yyy] }
+
+    (   (STAR:>STAR):>CONSTRAINT 
+      , STAR:>(STAR:>STAR)
+      , (STAR:>STAR) :> (STAR:>STAR)) -> do
+        yyy <- newName "yyy"
+        pure Var { typeArgs = [yyy], wrappedArgs = [] }
 
   let 
     missingContext :: DCxt
@@ -302,6 +310,12 @@ getKind (DDataD _ _ _ [DKindedTV _ kind, DKindedTV _ kind'] _ _) =
 
     ((DArrowT `DAppT` DStarT) `DAppT` DStarT, DStarT) -> 
       (STAR :> STAR) :> (STAR :> STAR)
+
+    (DConT _, DStarT) -> 
+      STAR :> (STAR :> STAR)
+
+    (DVarT _, DStarT) -> 
+      STAR :> (STAR :> STAR)
 
     ((DArrowT `DAppT` DVarT k) `DAppT` DStarT, DVarT k') | k == k' -> 
       (STAR :> STAR) :> (STAR :> STAR)

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -6,35 +7,60 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | https://github.com/Icelandjack/deriving-via/blob/master/haskellx-presentation/Presentation.md
--- https://gist.github.com/Icelandjack/1f578e7103ff327cbcfb3426c005e26c#gistcomment-2134119
 module NumHask.Rep where
 
+import DerivingVia
+
 import Protolude hiding (Rep)
-import Data.Semigroup
-import Control.Applicative
-import TH
 import Data.Functor.Rep
 import Data.Distributive
+import Data.Functor.Adjunction
+import Data.Kind (Type)
+import qualified Data.Vector as V
+-- import Data.Coerce
 
-data Opt a = None | Some a
-deriveVia ''Functor     ''Opt ''WrappedMonad
-deriveVia ''Applicative ''Opt ''WrappedMonad
+newtype WrappedRep f a = Rep_ (f a)
+  deriving (Functor, Show)
+  deriving newtype Representable
 
-instance Monad Opt where
-  return = Some
+instance Representable r => Distributive (WrappedRep r) where
+  distribute :: Functor f => f (WrappedRep r a) -> WrappedRep r (f a)
+  distribute = distributeRep
 
-  None   >>= _ = None
-  Some a >>= k = k a
+instance (Representable f) => Applicative (WrappedRep f) where
+  pure = pureRep
+  (<*>) = apRep
 
-data U = U
+newtype Vec (n :: Nat) a = Vec (V.Vector a)
+  deriving (Eq, Functor, Foldable)
 
-instance Monoid U where
-  mempty = U
-  mappend U U = U
-deriveVia ''Semigroup ''U ''WrappedMonoid
+-- deriveVia ''Applicative ''Vec ''WrappedRep
+-- $(stringE . show =<< dsReify ''Vec)
 
+instance forall n. (KnownNat n) => Distributive (Vec n) where
+  distribute f =
+    Vec $ V.generate n $ \i -> fmap (\(Vec v) -> V.unsafeIndex v i) f
+    where
+      n = fromInteger $ natVal (Proxy :: Proxy n)
+
+instance forall n. (KnownNat n) => Representable (Vec n) where
+  type Rep (Vec n) = Int
+  tabulate = Vec . V.generate n
+    where
+      n = fromInteger $ natVal (Proxy :: Proxy n)
+  index (Vec xs) i = xs V.! i
+
+
+-- from https://gist.github.com/Icelandjack/dab7111ba9ee2d1e25cf8728f7864e06
 newtype App f a = App_ (f a)
   deriving (Functor, Show)
   deriving newtype Applicative
@@ -67,7 +93,35 @@ instance (Applicative f, Floating a) => Floating (App f a) where
   atanh = fmap atanh
   acosh = fmap acosh
 
-newtype WrappedRep f a = Rep_ (f a)
-  deriving (Functor, Show)
-  -- deriving newtype Distributive
-  -- deriving newtype Representable
+-- from https://www.reddit.com/r/haskell/comments/6ox9ev/adjunctions_and_battleship/
+newtype WrappedAdj :: (Type -> Type) -> (Type -> Type) -> (Type -> Type) where
+  WrapAdj :: u a -> WrappedAdj f u a
+  deriving Functor
+
+instance Adjunction f u => Distributive (WrappedAdj f u) where
+  distribute :: Functor g => g (WrappedAdj f u a) -> WrappedAdj f u (g a)
+  distribute = distributeRep
+
+instance Adjunction f u => Representable (WrappedAdj f u) where
+  type Rep (WrappedAdj f u) = f ()
+
+  index :: WrappedAdj f u a -> (f () -> a)
+  index (WrapAdj ua) = indexAdjunction ua
+
+  tabulate :: (f () -> a) -> WrappedAdj f u a
+  tabulate f = WrapAdj (tabulateAdjunction f)
+
+data (:!) r b = b :! Rep r deriving (Functor)
+
+newtype Arr r b = Arr (r b) deriving newtype (Functor, Representable)
+
+instance Representable r => Distributive (Arr r) where
+  distribute :: Functor f => f (Arr r a) -> Arr r (f a)
+  distribute = distributeRep
+
+instance Representable r => Adjunction ((:!) r) (Arr r) where
+  unit :: a -> Arr r (r :! a)
+  unit = Arr . tabulate . (:!)
+
+  counit :: r :! Arr r a -> a
+  counit (xs :! rep) = xs `index` rep

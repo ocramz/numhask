@@ -16,6 +16,7 @@ module Test.QuickCheck.Utils where
 
 import Test.QuickCheck
 
+import Prelude hiding (Num(..))
 
 
 -- * Associative
@@ -40,6 +41,19 @@ isCommutativeBy (=~=) src (#) =
 
 isCommutative :: (Arbitrary a, Show a, Eq b) => (a -> a -> b) -> Property
 isCommutative = isCommutativeBy (==) arbitrary
+
+-- * Idempotent
+
+isIdempotentBy :: (Show a, Testable prop) =>
+     (b -> a -> prop) -> Gen a -> (a -> a -> b) -> Property
+isIdempotentBy (=~=) src (#) =
+  forAll src $ \a -> (a # a) =~= a
+  
+isIdempotent :: (Show a, Eq a, Arbitrary a) => (a -> a -> a) -> Property
+isIdempotent = isIdempotentBy (==) arbitrary
+  
+
+
 
 
 -- * Identity
@@ -80,6 +94,12 @@ isTotalOrder x y =
     classify (x == y) "equals" $
     classify (x < y)  "greater than" $
     x < y || x == y || x > y
+
+
+
+
+
+
 
 
 -- * Generic combinators

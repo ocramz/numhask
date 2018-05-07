@@ -7,6 +7,7 @@ import Test.QuickCheck.Utils
 
 import Control.Arrow (first)
 
+import Prelude hiding (Num(..))
 
 
 {----------------------------------------------------------

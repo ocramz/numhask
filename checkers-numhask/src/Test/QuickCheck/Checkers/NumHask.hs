@@ -28,7 +28,7 @@ unital gen =
 -- | Additive unital
 nonZero :: (Eq a, AdditiveUnital a) => Gen a -> Gen a
 nonZero g =
-  sized (\s -> satisfiesM (/= zero) (if s == zero then resize one g else g))
+  sized (\s -> satisfiesM (/= zero) (if s == zero then resize 1 g else g))
 
 
 -- | Signed

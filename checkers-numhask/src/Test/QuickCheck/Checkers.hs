@@ -95,6 +95,10 @@ reflexive :: (Arbitrary a, Show a) =>
              (a -> a -> Bool) -> Property
 reflexive rel = property $ \ a -> a `rel` a
 
+reflexive' :: (Arbitrary a, Show a) =>
+     (a -> a -> Bool) -> Gen a -> Property
+reflexive' rel gen = forAll gen $ \aa -> aa `rel` aa
+
 -- | Transitive property: @a `rel` b && b `rel` c ==> a `rel` c@.
 -- Generate @a@ randomly, but use @gen a@ to generate @b@ and @gen b@ to
 -- generate @c@.  @gen@ ought to satisfy @rel@ fairly often.
@@ -126,6 +130,10 @@ antiSymmetric rel gen =
     forAll (gen a) $ \ b ->
       (a `rel` b) && (b `rel` a) ==> a == b
 
+
+
+-- semigroup :: (Show a, Eq a, Arbitrary a, Semigroup a) => Property
+-- semigroup = isAssociative ((<>) :: a -> a -> a)
 
 
 

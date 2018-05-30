@@ -1,8 +1,22 @@
+{-|
+Module      : Test.QuickCheck.Checkers.NumHask
+Description : NumHask-related properties
+Copyright   : (c) 2018, Marco Zocca
+License     : BSD
+Maintainer  : ocramz fripost.org
+Stability   : experimental
+Portability : POSIX
+
+This is meant to be the topmost module containing NumHask-specific declarations.
+
+
+-}
 module Test.QuickCheck.Checkers.NumHask where
 
 import Control.Applicative (liftA2, liftA3)
 
-import Test.QuickCheck (Property, Arbitrary, arbitrary, Gen, Testable(..), property, forAll, (.&.), (==>), (===), conjoin, sized, resize) 
+import Test.QuickCheck (Property, Arbitrary, arbitrary, Gen, Testable(..), property, forAll, (.&.), (==>), (===), conjoin, sized, resize)
+
 import Test.QuickCheck.Checkers
 import Test.QuickCheck.Utils
 
